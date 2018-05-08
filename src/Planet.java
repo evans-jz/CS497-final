@@ -22,6 +22,13 @@ import static com.jogamp.opengl.GL.*; // GL constants
 import static com.jogamp.opengl.GL2.*; // GL2 constants
 
 public class Planet {
+    private GL2 gl2;
+    private GLU glu;
+    private Texture texture;
+
+    private float speed;
+    private float rotationAngle = 0;
+    private float angle;
 
     private float yearSpeed;
     private float yearAngle;
@@ -29,60 +36,47 @@ public class Planet {
     private float dayAngle;
     private float dist;
     private float radius;
-    private GL2 gl;
-    private GLU glu;
+
+    private final int slices = 16;
+    private final int stacks = 16;
 
     private double red;
     private double green;
     private double blue;
 
-    private final int slices = 16;
-    private final int stacks = 16;
-
-    private float speed = 0;
-    private Texture texture;
-    public Planet(GL2 gl, GLU glu, Texture planetTexture, float speed, float distance, float radius) {
-        this.gl = gl;
+//    public Planet(GL2 gl, GLU glu, Texture planetTexture, float speed, float distance, float radius) {
+    public Planet(float ys, float ds, float d, float r, String text, GLU glu, GL2 gl2) {
+        yearSpeed = ys;
+        yearAngle = 0;
+        daySpeed = ds;
+        dayAngle = 0;
+        dist = d;
+        radius = r;
+        try {
+            texture = TextureIO.newTexture(new File(text), true);
+        } catch (IOException exc) {
+            exc.printStackTrace();
+            System.exit(1);
+        }
         this.glu = glu;
-        this.texture = planetTexture;
+        this.gl2 = gl2;
 
-        this.speed = speed;
-        this.dist = distance;
-        this.radius = radius;
+        red = Math.random();
+        green = Math.random();
+        blue = Math.random();
     }
-//    public Planet(float ys, float ds, float d, float r, String text, GLU g,
-//                  GL2 g2) {
-//        yearSpeed = ys;
-//        yearAngle = 0;
-//        daySpeed = ds;
-//        dayAngle = 0;
-//        dist = d;
-//        radius = r;
-//        try {
-//            texture = TextureIO.newTexture(new File(text), true);
-//        } catch (IOException exc) {
-//            exc.printStackTrace();
-//            System.exit(1);
-//        }
-//        glu = g;
-//        gl = g2;
-//
-//        red = Math.random();
-//        green = Math.random();
-//        blue = Math.random();
-//    }
 
     public void drawPlanet() {
         // Apply texture.
-        texture.enable(gl);
-        texture.bind(gl);
+        texture.enable(gl2);
+        texture.bind(gl2);
 
-        gl.glPushMatrix();
+        gl2.glPushMatrix();
         {
-            gl.glRotatef(yearAngle, 0.0f, -1.0f, 0.0f); // Rotate around the sun
-            gl.glTranslatef(dist, 0.0f, 0.0f); // Move away from sun
-            gl.glRotatef(dayAngle, 0.0f, -1.0f, 0.0f); // Rotate planet
-            gl.glRotatef(-90.0f, 1.0f, 0.0f, 0.0f); // Correctly orient planet
+            gl2.glRotatef(yearAngle, 0.0f, -1.0f, 0.0f); // Rotate around the sun
+            gl2.glTranslatef(dist, 0.0f, 0.0f); // Move away from sun
+            gl2.glRotatef(dayAngle, 0.0f, -1.0f, 0.0f); // Rotate planet
+            gl2.glRotatef(-90.0f, 1.0f, 0.0f, 0.0f); // Correctly orient planet
             // Draw planet
             GLUquadric quad = glu.gluNewQuadric();
             glu.gluQuadricTexture(quad, true);
@@ -92,28 +86,28 @@ public class Planet {
 
             glu.gluSphere(quad, radius, slices, stacks);
             glu.gluDeleteQuadric(quad);
-
+            texture.disable(gl2);
         }
-        gl.glPopMatrix();
+        gl2.glPopMatrix();
 
-        texture.disable(gl);
+        texture.disable(gl2);
     }
 
-//    public void drawPath() {
-//        double inc = Math.PI / 24;
-//        double max = 2 * Math.PI;
-//        gl.glEnable(GL_LINE_SMOOTH);
-//        gl.glLineWidth(2f);
-//
-//        gl.glBegin(GL_LINE_LOOP);
-//        gl.glColor3d(red, green, blue);
-//        for (double d = 0; d < max; d += inc) {
-//            gl.glVertex3d(Math.sin(d) * dist, 0, Math.cos(d) * dist);
-//        }
-//        gl.glColor3f(1.0f, 1.0f, 1.0f);
-//        gl.glEnd();
-//
-//    }
+    public void drawPath() {
+        double inc = Math.PI / 24;
+        double max = 2 * Math.PI;
+        gl2.glEnable(GL_LINE_SMOOTH);
+        gl2.glLineWidth(2f);
+
+        gl2.glBegin(GL_LINE_LOOP);
+        gl2.glColor3d(red, green, blue);
+        for (double d = 0; d < max; d += inc) {
+            gl2.glVertex3d(Math.sin(d) * dist, 0, Math.cos(d) * dist);
+        }
+        gl2.glColor3f(1.0f, 1.0f, 1.0f);
+        gl2.glEnd();
+
+    }
 
     public void update() {
         yearAngle += yearSpeed;

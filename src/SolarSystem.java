@@ -39,10 +39,8 @@ import java.awt.event.KeyListener;
 @SuppressWarnings("serial")
 public class SolarSystem extends GLCanvas implements GLEventListener , KeyListener{
     // Define constants for the top-level container
-    private static String TITLE = "NeHe Lesson #6: Texture";
     private static int CANVAS_WIDTH; // width of the drawable
     private static int CANVAS_HEIGHT; // height of the drawable
-    private static final int FPS = 60; // animator's target frames per second
     private FPSAnimator animator;
 
     /** Constructor to setup the GUI for this Component */
@@ -55,9 +53,7 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         this.addKeyListener(this);
     }
 
-    // Setup OpenGL Graphics Renderer
-
-    private GLU glu; // for the GL Utility
+    private GLU glu;
 
     private static float floorLevel = -.75f;
     private ArrayList<Planet> planets;
@@ -101,34 +97,48 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
 
         animator = new FPSAnimator(this, 60, true);
         animator.start();
-        // lighting
 
         // adding planets
         String texturePath = "C:\\Users\\evans\\IdeaProjects\\CS497-final\\res\\";
-                
-        earthTexture = getObjectTexture(gl, texturePath+"earthmap1k.jpg");
-        cloudTexture = getObjectTexture(gl, texturePath+"tx_15_1.png");
-        skyTexture = getObjectTexture(gl, texturePath+"starfield.png");
-        moonTexture = getObjectTexture(gl, texturePath+"tx_0_0.png");
+        try {
+            skyTexture = TextureIO.newTexture(new File(
+                    texturePath+"starfield.png"), true);
+            gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            TextureCoords fTextureCoords = skyTexture.getImageTexCoords();
+            fTextureTop = fTextureCoords.top();
+            fTextureBottom = fTextureCoords.bottom();
+            fTextureLeft = fTextureCoords.left();
+            fTextureRight = fTextureCoords.right();
 
-        Planet sun = new Planet(gl, glu, getObjectTexture(gl, texturePath+"preview_sun.jpg"), 0.1f, 0f , SUN_RADIUS);
-        Planet mercury = new Planet(gl, glu, getObjectTexture(gl, texturePath+"mercurymap.jpg"), 1.2f, SUN_RADIUS + 2f, 2.56f);
-        Planet venus = new Planet(gl, glu, getObjectTexture(gl, texturePath+"venusmap.jpg"), 0.7f, SUN_RADIUS + 12f, 3.56f);
-        Planet Jupiter = new Planet(gl, glu, getObjectTexture(gl, texturePath+"jupiter.jpg"), 0.25f, SUN_RADIUS + 65f, 8.56f);
-        Planet mars = new Planet(gl, glu, getObjectTexture(gl, texturePath+"mars_1k_color.jpg"), 0.3f, SUN_RADIUS + 50f, 3.56f);
-        Planet Saturn = new Planet(gl, glu, getObjectTexture(gl, texturePath+"saturn.jpg"), 0.3f, SUN_RADIUS + 90f, 7.56f);
-        Planet Uranus = new Planet(gl, glu, getObjectTexture(gl, texturePath+"uranuscyl1.jpg"), 0.25f, SUN_RADIUS + 105f, 6.56f);
-        Planet Neptune = new Planet(gl, glu, getObjectTexture(gl, texturePath+"neptune_current.jpg"), 0.275f, SUN_RADIUS + 120f, 5.56f);
+        } catch (GLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+                
+//        earthTexture = getObjectTexture(gl, texturePath+"earthmap1k.jpg");
+
+        Planet sun =        new Planet(0.0f,0.1f,0.0f, 0.7f, texturePath+"preview_sun.jpg", glu, gl);
+        Planet mercury =    new Planet(2.0f,1.0f,1.0f, 0.1f, texturePath+"mercurymap.jpg", glu, gl);
+        Planet venus =      new Planet(1.3f,0.5f,2.0f, 0.22f,texturePath+"venusmap.jpg", glu, gl);
+        Planet earth =      new Planet(1.0f,0.6f,3.0f, 0.26f,texturePath+"earthmap1k.jpg", glu, gl);
+        Planet mars =       new Planet(0.5f,0.9f,4.0f, 0.12f,texturePath+"mars_1k_color.jpg", glu, gl);
+        Planet jupiter =    new Planet(0.2f,0.2f,5.0f, 0.5f,texturePath+"jupiter.jpg", glu, gl);
+        Planet saturn =     new Planet(0.15f,0.3f,6.0f, 0.35f,texturePath+"saturn.jpg", glu, gl);
+        Planet uranus =     new Planet(0.08f,0.45f,7.0f, 0.26f,texturePath+"uranuscyl1.jpg", glu, gl);
+        Planet neptune =    new Planet(0.05f,0.4f,8.0f, 0.3f,texturePath+"neptune_current.jpg", glu, gl);
 
         planets = new ArrayList<Planet>();
         planets.add(sun);
         planets.add(mercury);
         planets.add(venus);
+        planets.add(earth);
         planets.add(mars);
-        planets.add(Jupiter);
-        planets.add(Saturn);
-        planets.add(Uranus);
-        planets.add(Neptune);
+        planets.add(jupiter);
+        planets.add(saturn);
+        planets.add(uranus);
+        planets.add(neptune);
 
     }
 
@@ -138,41 +148,50 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
      */
     @Override
     public void display(GLAutoDrawable drawable) {
+        GL2 gl = drawable.getGL().getGL2(); // get the OpenGL 2 graphics context
+        setCamera(gl, 200);
+        aimCamera(gl, glu);
+        moveCamera();
+        setLights(gl);
+
+        gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        gl.glLoadIdentity(); // reset the model-view matrix
+        gl.glTranslatef(0.0f, 0.0f, -20.0f);
+        gl.glRotatef(30f, 1.0f, 0.0f, 0.0f);
+
+        skyTexture.enable(gl);
+        skyTexture.bind(gl);
+
+//        //draw sky
+//        gl.glBegin(GL_QUADS);
+//        gl.glTexCoord2f(fTextureRight, fTextureTop);
+//        gl.glVertex3f(20.0f, floorLevel, 20.0f);
+//        gl.glTexCoord2f(fTextureLeft, fTextureTop);
+//        gl.glVertex3f(-20.0f, floorLevel, 20.0f);
+//        gl.glTexCoord2f(fTextureLeft, fTextureBottom);
+//        gl.glVertex3f(-20.0f, floorLevel, -20.0f);
+//        gl.glTexCoord2f(fTextureRight, fTextureBottom);
+//        gl.glVertex3f(20.0f, floorLevel, -20.0f);
+//        gl.glEnd();
+
+        skyTexture.disable(gl);
+
+        for (Planet p: planets) {
+            p.drawPlanet();
+            p.drawPath();
+        }
+
         if (!animator.isAnimating()) {
             return;
         }
-        GL2 gl = drawable.getGL().getGL2(); // get the OpenGL 2 graphics context
-        setCamera(gl,200);
-
-        gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-//        cam.useView();
-        for (Planet p: planets) {
-            p.drawPlanet();
-//            p.drawPath();
-        }
-        skyTexture.enable(gl);
-        skyTexture.bind(gl);
 
         update(drawable);
     }
 
-    private void setCamera(GL2 gl, float distance) {
-        gl.glMatrixMode(GL2.GL_PROJECTION);
-        gl.glLoadIdentity();
-
-        float widthHeightRatio = (float) getWidth() / (float) getHeight();
-        glu.gluPerspective(45, widthHeightRatio, 1, 1000);
-        glu.gluLookAt(0, -5, distance, 0, 0, 0, 0, 1, 0);
-        gl.glMatrixMode(GL2.GL_MODELVIEW);
-        gl.glLoadIdentity();
-    }
-    public void moveCamera() {
-        float[] tmp = polarToCartesian(cameraAzimuth, cameraSpeed, cameraElevation);
-
-        cameraCoordsPosx += tmp[0];
-        cameraCoordsPosy += tmp[1];
-        cameraCoordsPosz += tmp[2];
+    private void update(GLAutoDrawable drawable) {
+        for (Planet p: planets) {
+            p.update();
+        }
     }
 
     private float[] polarToCartesian(float azimuth, float length, float altitude) {
@@ -213,7 +232,25 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
 
         return result;
     }
+    private void setCamera(GL2 gl, float distance) {
+        float widthHeightRatio = (float) getWidth() / (float) getHeight();
 
+        gl.glMatrixMode(GL2.GL_PROJECTION);
+        gl.glLoadIdentity();
+        glu.gluPerspective(50, widthHeightRatio, 1f, 1000f);
+        gl.glMatrixMode(GL2.GL_MODELVIEW);
+        gl.glLoadIdentity();
+        glu.gluLookAt(0, 10, distance, 0, 0, 0, 0, 1, 0);
+
+    }
+
+    public void moveCamera() {
+        float[] tmp = polarToCartesian(cameraAzimuth, cameraSpeed, cameraElevation);
+
+        cameraCoordsPosx += tmp[0];
+        cameraCoordsPosy += tmp[1];
+        cameraCoordsPosz += tmp[2];
+    }
     public void aimCamera(GL2 gl, GLU glu) {
         gl.glLoadIdentity();
 
@@ -228,6 +265,36 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         glu.gluLookAt(cameraCoordsPosx, cameraCoordsPosy, cameraCoordsPosz, cameraCoordsPosx + tmp[0],
                 cameraCoordsPosy + tmp[1], cameraCoordsPosz + tmp[2], cameraUpx, cameraUpy, cameraUpz);
     }
+
+    private void setLights(GL2 gl) {
+
+        float SHINE_ALL_DIRECTIONS = 1;
+        float[] lightPos = { 0, 0, 0, SHINE_ALL_DIRECTIONS };
+        float[] lightColorAmbient = { 0.5f, 0.5f, 0.5f, 1f };
+        float[] lightColorSpecular = { 0.8f, 0.8f, 0.8f, 1f };
+
+        gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos, 0);
+        gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_AMBIENT, lightColorAmbient, 0);
+        gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_SPECULAR, lightColorSpecular, 0);
+
+        float lmodel_ambient[] = {1.0f, 1.0f, 1.0f, 1.0f};
+        gl.glLightModelfv(GL2.GL_LIGHT_MODEL_AMBIENT, lmodel_ambient, 0);
+        gl.glLightModeli(GL2.GL_LIGHT_MODEL_TWO_SIDE, 1);
+
+        gl.glDisable(GL2.GL_COLOR_MATERIAL);
+        gl.glEnable(GL2.GL_NORMALIZE);
+        gl.glEnable(GL2.GL_LIGHTING);
+        gl.glEnable(GL2.GL_LIGHT0);
+
+        gl.glEnable(GL2.GL_DEPTH_TEST);
+        gl.glDepthFunc(GL2.GL_LESS);
+        gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT, GL2.GL_NICEST);
+        gl.glCullFace(GL2.GL_BACK);
+        gl.glEnable(GL2.GL_CULL_FACE);
+        gl.glShadeModel(GL2.GL_SMOOTH);
+
+    }
+
     /**
      * Called back before the OpenGL context is destroyed. Release resource such
      * as buffers.
@@ -235,13 +302,6 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
     @Override
     public void dispose(GLAutoDrawable drawable) {
     }
-
-    private void update(GLAutoDrawable drawable) {
-        for(int i = 0; i < planets.size(); i++) {
-            planets.get(i).update();
-        }
-    }
-
 
     public void keyPressed(KeyEvent e) {
         int keyCode = e.getKeyCode();
@@ -327,4 +387,5 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
 
         return tex;
     }
+
 }
