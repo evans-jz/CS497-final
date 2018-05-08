@@ -1,50 +1,35 @@
-import java.awt.*;
-import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
-import javax.swing.*;
-import com.jogamp.opengl.GL;
+
 import com.jogamp.opengl.GL2;
-import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.GLEventListener;
-import com.jogamp.opengl.GLException;
-import com.jogamp.opengl.awt.GLCanvas;
+
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.glu.GLUquadric;
 
-import org.omg.CORBA.portable.InputStream;
-
-import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.texture.Texture;
-import com.jogamp.opengl.util.texture.TextureCoords;
 import com.jogamp.opengl.util.texture.TextureIO;
 import static com.jogamp.opengl.GL.*; // GL constants
-import static com.jogamp.opengl.GL2.*; // GL2 constants
 
 public class Planet {
     private GL2 gl2;
     private GLU glu;
-    private Texture texture;
-
-    private float speed;
-    private float rotationAngle = 0;
-    private float angle;
 
     private float yearSpeed;
     private float yearAngle;
     private float daySpeed;
     private float dayAngle;
     private float dist;
+    private float angle;
     private float radius;
-
-    private final int slices = 16;
-    private final int stacks = 16;
+    private Texture texture;
 
     private double red;
     private double green;
     private double blue;
 
-//    public Planet(GL2 gl, GLU glu, Texture planetTexture, float speed, float distance, float radius) {
+    private final int slices = 16;
+    private final int stacks = 16;
+
     public Planet(float ys, float ds, float d, float r, String text, GLU glu, GL2 gl2) {
         yearSpeed = ys;
         yearAngle = 0;
@@ -106,7 +91,6 @@ public class Planet {
         }
         gl2.glColor3f(1.0f, 1.0f, 1.0f);
         gl2.glEnd();
-
     }
 
     public void update() {

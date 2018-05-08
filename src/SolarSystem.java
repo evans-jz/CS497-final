@@ -11,14 +11,12 @@ import static com.jogamp.opengl.GL2.*; // GL2 constants
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
-import com.jogamp.opengl.GLException;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
-import com.jogamp.opengl.util.texture.TextureCoords;
 import com.jogamp.opengl.util.FPSAnimator;
 
 import java.util.ArrayList;
@@ -209,10 +207,6 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         gl.glEnable(GL2.GL_CULL_FACE);
         gl.glShadeModel(GL2.GL_SMOOTH);
     }
-
-    public void dispose(GLAutoDrawable drawable) {
-    }
-
     public void keyPressed(KeyEvent e) {
         int keyCode = e.getKeyCode();
 
@@ -241,8 +235,7 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
             cam.rotateRight();
         }
     }
-    public void keyReleased(KeyEvent e) { }
-    public void keyTyped(KeyEvent e) { }
+
     public void reshape(GLAutoDrawable drawable, int x, int y, int width,
                         int height) {
         GL2 gl = drawable.getGL().getGL2();
@@ -279,4 +272,8 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         }
         return tex;
     }
+    public void keyReleased(KeyEvent e) { }
+    public void keyTyped(KeyEvent e) { }
+    public void dispose(GLAutoDrawable drawable) { }
+
 }

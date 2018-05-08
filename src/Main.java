@@ -11,8 +11,7 @@ public class Main {
         GLCapabilities capabilities = new GLCapabilities(profile);
 
         Canvas canvas = new SolarSystem(800, 800, capabilities);
-        // the window frame
-        JFrame frame = new JFrame("Solar system");
+        JFrame frame = new JFrame("CS497:Solar System");
         frame.getContentPane().add(canvas, BorderLayout.CENTER);
 
         frame.setSize(frame.getContentPane().getPreferredSize());
