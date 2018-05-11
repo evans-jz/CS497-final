@@ -1,12 +1,10 @@
 import java.awt.*;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import static com.jogamp.opengl.GL.*; // GL constants
-import static com.jogamp.opengl.GL2.*; // GL2 constants
+import static com.jogamp.opengl.GL.*;
+import static com.jogamp.opengl.GL2.*;
 
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -15,27 +13,40 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.util.texture.Texture;
-import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 import com.jogamp.opengl.util.FPSAnimator;
 
 import java.util.ArrayList;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-public class SolarSystem extends GLCanvas implements GLEventListener , KeyListener{
-    // Define constants for the top-level container
+import com.jogamp.opengl.glu.GLUquadric;
+
+public class SolarSystem extends GLCanvas implements GLEventListener , MouseListener, MouseMotionListener, KeyListener, ActionListener{
     private static int CANVAS_WIDTH;
     private static int CANVAS_HEIGHT;
     private GLU glu;
+    private GL2 gl;
+
     private FPSAnimator animator;
-    private Camera cam;
-    private Texture skyTexture;
     private ArrayList<Planet> planets;
-//    private float cameraAzimuth = 0.0f, cameraSpeed = 0.0f, cameraElevation = 0.0f;
-//    private float cameraUpx = 0.0f, cameraUpy = 1.0f, cameraUpz = 0.0f;
-//    private float cameraCoordsPosx = 0.0f, cameraCoordsPosy = 0.0f, cameraCoordsPosz = -20.0f;
-//    private Texture skyTexture;
+
+    private float xpos = 0, ypos = 0, zpos = 0;
+    private float centerx, centery, centerz;
+    private float roth = 0, rotv = 0;
+    private int mouseX, mouseY, mouseButton;
+    private float motionSpeed, rotateSpeed;
+    private float xmin = -10f, ymin = -10f, zmin = -10f;
+    private float xmax = 10f, ymax = 10f, zmax = 10f;
+    private float animation_speed = 1.0f;
+
+    private final String texturePath = "C:\\Users\\evans\\IdeaProjects\\CS497-final\\res\\";
+    private Texture skyTexture;
 
     public SolarSystem(int width, int height, GLCapabilities capabilities) {
         super(capabilities);
@@ -44,10 +55,30 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         setPreferredSize(new Dimension(CANVAS_WIDTH, CANVAS_HEIGHT));
         this.addGLEventListener(this);
         this.addKeyListener(this);
+        this.addMouseListener(this);
+        this.addMouseMotionListener(this);
+    }
+    void initViewParameters() {
+        roth = rotv = 0;
+        float sun_r = (float) Math.sqrt((xmax - xmin) * (xmax - xmin) + (ymax - ymin) * (ymax - ymin) + (zmax - zmin) * (zmax - zmin)) * 0.707f;
+
+        centerx = (xmax + xmin) / 2.f;
+        centery = (ymax + ymin) / 2.f;
+        centerz = (zmax + zmin) / 2.f;
+        xpos = centerx;
+        ypos = centery;
+        zpos = sun_r / (float) Math.sin(45.f * Math.PI / 180.f) + centerz;
+
+        motionSpeed = 0.002f * sun_r;
+        rotateSpeed = 0.1f;
     }
 
     public void init(GLAutoDrawable drawable) {
-        GL2 gl = drawable.getGL().getGL2();
+        gl = drawable.getGL().getGL2();
+
+        initViewParameters();
+        setLights(gl);
+
         glu = new GLU();
         gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         gl.glClearDepth(1.0f);
@@ -56,13 +87,22 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
         gl.glShadeModel(GL_SMOOTH);
 
-        animator = new FPSAnimator(this, 60, true);
+        initPlanets(gl);
+        animator = new FPSAnimator(drawable, 60,true);
         animator.start();
 
-        // adding planets
-        String texturePath = "C:\\Users\\evans\\IdeaProjects\\CS497-final\\res\\";
-        skyTexture = getObjectTexture(gl, texturePath+"starfield.png");
+        try {
+            skyTexture = TextureIO.newTexture(new File(texturePath+"starfield.png"), true);
+            skyTexture.bind(gl);
+            skyTexture.enable(gl);
+        } catch (IOException exc) {
+            exc.printStackTrace();
+            System.exit(1);
+        }
+        this.requestFocus();
+    }
 
+    public void initPlanets(GL2 gl){
         Planet sun =        new Planet(0.0f,0.1f,0.0f, 0.7f, texturePath+"preview_sun.jpg", glu, gl);
         Planet mercury =    new Planet(2.0f,1.0f,1.0f, 0.1f, texturePath+"mercurymap.jpg", glu, gl);
         Planet venus =      new Planet(1.3f,0.5f,2.0f, 0.22f,texturePath+"venusmap.jpg", glu, gl);
@@ -86,100 +126,33 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
     }
 
     public void display(GLAutoDrawable drawable) {
-        GL2 gl = drawable.getGL().getGL2();
-//        setCamera(gl, 200);
-//        aimCamera(gl, glu);
-//        moveCamera();
-        setLights(gl);
+        gl = drawable.getGL().getGL2();
 
         gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gl.glLoadIdentity();
-        gl.glTranslatef(0.0f, 0.0f, -20.0f);
+
+        gl.glTranslatef(-xpos, -ypos, -zpos);
+        gl.glTranslatef(centerx, centery, centerz);
+        gl.glRotatef(360.f - roth, 0, 1.0f, 0);
         gl.glRotatef(30f, 1.0f, 0.0f, 0.0f);
+        gl.glRotatef(rotv, 1.0f, 0, 0);
+        gl.glTranslatef(-centerx, -centery, -centerz);
 
         skyTexture.enable(gl);
         skyTexture.bind(gl);
-//        skyTexture.disable(gl);
+        drawCube(gl);
+        skyTexture.disable(gl);
+
         for (Planet p: planets) {
             p.drawPlanet();
             p.drawPath();
         }
-        if (!animator.isAnimating()) {
-            return;
-        }
-        update(drawable);
-    }
-
-    private void update(GLAutoDrawable drawable) {
-        for (Planet p: planets) {
-            p.update();
+        if (animator.isAnimating()) {
+            for (Planet p: planets) {
+                p.update(animation_speed);
+            }
         }
     }
-
-//    private float[] polarToCartesian(float azimuth, float length, float altitude) {
-//        float[] result = new float[3];
-//        float x, y, z;
-//
-//        float theta = (float) Math.toRadians(90 - azimuth);
-//        float tantheta = (float) Math.tan(theta);
-//        float radian_alt = (float) Math.toRadians(altitude);
-//        float cospsi = (float) Math.cos(radian_alt);
-//
-//        x = (float) Math.sqrt((length * length) / (tantheta * tantheta + 1));
-//        z = tantheta * x;
-//        x = -x;
-//
-//        if ((azimuth >= 180.0 && azimuth <= 360.0) || azimuth == 0.0f) {
-//            x = -x;
-//            z = -z;
-//        }
-//        // Calculate y, and adjust x and z
-//        y = (float) (Math.sqrt(z * z + x * x) * Math.sin(radian_alt));
-//        if (length < 0) {
-//            x = -x;
-//            z = -z;
-//            y = -y;
-//        }
-//        x = x * cospsi;
-//        z = z * cospsi;
-//        result[0] = x;
-//        result[1] = y;
-//        result[2] = z;
-//
-//        return result;
-//    }
-//    private void setCamera(GL2 gl, float distance) {
-//        float widthHeightRatio = (float) getWidth() / (float) getHeight();
-//
-//        gl.glMatrixMode(GL2.GL_PROJECTION);
-//        gl.glLoadIdentity();
-//        glu.gluPerspective(50, widthHeightRatio, 1f, 1000f);
-//        gl.glMatrixMode(GL2.GL_MODELVIEW);
-//        gl.glLoadIdentity();
-//        glu.gluLookAt(0, 10, distance, 0, 0, 0, 0, 1, 0);
-//    }
-//
-//    public void moveCamera() {
-//        float[] tmp = polarToCartesian(cameraAzimuth, cameraSpeed, cameraElevation);
-//
-//        cameraCoordsPosx += tmp[0];
-//        cameraCoordsPosy += tmp[1];
-//        cameraCoordsPosz += tmp[2];
-//    }
-//    public void aimCamera(GL2 gl, GLU glu) {
-//        gl.glLoadIdentity();
-//
-//        float[] tmp = polarToCartesian(cameraAzimuth, 100.0f, cameraElevation);
-//
-//        float[] camUp = polarToCartesian(cameraAzimuth, 100.0f, cameraElevation + 90);
-//
-//        cameraUpx = camUp[0];
-//        cameraUpy = camUp[1];
-//        cameraUpz = camUp[2];
-//
-//        glu.gluLookAt(cameraCoordsPosx, cameraCoordsPosy, cameraCoordsPosz, cameraCoordsPosx + tmp[0],
-//                cameraCoordsPosy + tmp[1], cameraCoordsPosz + tmp[2], cameraUpx, cameraUpy, cameraUpz);
-//    }
 
     private void setLights(GL2 gl) {
         float SHINE_ALL_DIRECTIONS = 1;
@@ -207,33 +180,25 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         gl.glEnable(GL2.GL_CULL_FACE);
         gl.glShadeModel(GL2.GL_SMOOTH);
     }
-    public void keyPressed(KeyEvent e) {
-        int keyCode = e.getKeyCode();
+    private void drawCube(GL2 gl) {
+        skyTexture.enable(gl);
+        skyTexture.bind(gl);
 
-        if (keyCode == KeyEvent.VK_W) {
-            cam.moveForward();
-        }
-        if (keyCode == KeyEvent.VK_A) {
-            cam.moveLeft();
-        }
-        if (keyCode == KeyEvent.VK_S) {
-            cam.moveBack();
-        }
-        if (keyCode == KeyEvent.VK_D) {
-            cam.moveRight();
-        }
-        if (keyCode == KeyEvent.VK_R) {
-            cam.moveUp();
-        }
-        if (keyCode == KeyEvent.VK_F) {
-            cam.moveDown();
-        }
-        if (keyCode == KeyEvent.VK_Q) {
-            cam.rotateLeft();
-        }
-        if (keyCode == KeyEvent.VK_E) {
-            cam.rotateRight();
-        }
+        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
+        final float radius = 70f;
+        final int slices = 50;
+        final int stacks = 50;
+        gl.glEnable(GL2.GL_BLEND);
+        gl.glBlendFunc(GL2.GL_SRC_COLOR, GL2.GL_DST_ALPHA);
+        GLUquadric sky = glu.gluNewQuadric();
+        glu.gluQuadricTexture(sky, true);
+        glu.gluQuadricDrawStyle(sky, GLU.GLU_FILL);
+        glu.gluQuadricNormals(sky, GLU.GLU_FLAT);
+        glu.gluQuadricOrientation(sky, GLU.GLU_INSIDE);
+        glu.gluSphere(sky, radius, slices, stacks);
+
+        gl.glEnable(GL2.GL_BLEND);
+        gl.glBlendFunc(GL2.GL_SRC_COLOR, GL2.GL_DST_ALPHA);
     }
 
     public void reshape(GLAutoDrawable drawable, int x, int y, int width,
@@ -243,7 +208,6 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         if (height == 0)
             height = 1;
         float aspect = (float) width / height;
-        cam = new Camera(glu, drawable, 70, aspect, 0.3f, 1000);
         gl.glViewport(0, 0, width, height);
 
         gl.glMatrixMode(GL_PROJECTION);
@@ -255,25 +219,89 @@ public class SolarSystem extends GLCanvas implements GLEventListener , KeyListen
         gl.glLoadIdentity();
     }
 
-    private Texture getObjectTexture(GL2 gl, String fileName) {
-        FileInputStream stream;
-        Texture tex = null;
-        String extension = fileName.substring(fileName.lastIndexOf('.'));
-        try {
-            stream = new FileInputStream(new File(fileName));
-            TextureData data = TextureIO.newTextureData(gl.getGLProfile(), stream, false, extension);
-            tex = TextureIO.newTexture(data);
-        } catch (FileNotFoundException e) {
-            System.err.println("Error loading the file!");
-            e.printStackTrace();
-        } catch (IOException e) {
-            System.err.println("IO Exception!");
-            e.printStackTrace();
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_ESCAPE:
+            case KeyEvent.VK_Q:
+                System.exit(0);
+                break;
+            case 'r':
+            case 'R':
+                initViewParameters();
+                break;
+            case 'a':
+            case 'A':
+                if (animator.isAnimating()) {
+                    animator.stop();
+                } else {
+                    animator.start();
+                }
+                break;
+            case '+':
+            case '=':
+                animation_speed += 0.1f;
+                if(animation_speed > 3)
+                    animation_speed = 3;
+                break;
+            case '-':
+            case '_':
+                animation_speed -= 0.1f;
+                if(animation_speed < 0)
+                    animation_speed = 0.1f;
+                break;
+            default:
+                break;
         }
-        return tex;
+        this.display();
     }
-    public void keyReleased(KeyEvent e) { }
-    public void keyTyped(KeyEvent e) { }
-    public void dispose(GLAutoDrawable drawable) { }
+    public void mouseDragged(MouseEvent e) {
+        int x = e.getX();
+        int y = e.getY();
+        if (mouseButton == MouseEvent.BUTTON3) {
+            zpos -= (y - mouseY) * motionSpeed;
+            mouseX = x;
+            mouseY = y;
+            this.display();
+        } else if (mouseButton == MouseEvent.BUTTON2) {
+            xpos -= (x - mouseX) * motionSpeed;
+            ypos += (y - mouseY) * motionSpeed;
+            mouseX = x;
+            mouseY = y;
+            this.display();
+        } else if (mouseButton == MouseEvent.BUTTON1) {
+            roth -= (x - mouseX) * rotateSpeed;
+            rotv += (y - mouseY) * rotateSpeed;
+            mouseX = x;
+            mouseY = y;
+            this.display();
+        }
+    }
+    public void mousePressed(MouseEvent e) {
+        mouseX = e.getX();
+        mouseY = e.getY();
+        mouseButton = e.getButton();
+        this.display();
+    }
+
+    public void mouseReleased(MouseEvent e) {
+        mouseButton = MouseEvent.NOBUTTON;
+        this.display();
+    }
+    public void dispose(GLAutoDrawable glautodrawable) {
+    }
+    public void keyTyped(KeyEvent e) {
+    }
+    public void keyReleased(KeyEvent e) {
+    }
+    public void mouseMoved(MouseEvent e) {
+    }
+    public void actionPerformed(ActionEvent e) {
+    }
+    public void mouseClicked(MouseEvent e) {
+    }
+    public void mouseEntered(MouseEvent e) {
+    }
+    public void mouseExited(MouseEvent e) {
+    }
 
 }

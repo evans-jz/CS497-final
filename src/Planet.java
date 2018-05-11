@@ -8,7 +8,7 @@ import com.jogamp.opengl.glu.GLUquadric;
 
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureIO;
-import static com.jogamp.opengl.GL.*; // GL constants
+import static com.jogamp.opengl.GL.*;
 
 public class Planet {
     private GL2 gl2;
@@ -19,7 +19,6 @@ public class Planet {
     private float daySpeed;
     private float dayAngle;
     private float dist;
-    private float angle;
     private float radius;
     private Texture texture;
 
@@ -27,8 +26,8 @@ public class Planet {
     private double green;
     private double blue;
 
-    private final int slices = 16;
-    private final int stacks = 16;
+    private final int slices = 50;
+    private final int stacks = 50;
 
     public Planet(float ys, float ds, float d, float r, String text, GLU glu, GL2 gl2) {
         yearSpeed = ys;
@@ -93,8 +92,19 @@ public class Planet {
         gl2.glEnd();
     }
 
-    public void update() {
-        yearAngle += yearSpeed;
-        dayAngle += daySpeed;
+    public void update(float animation_speed) {
+            yearAngle += yearSpeed*animation_speed;
+            if (yearAngle >360f)
+                yearAngle = yearAngle-360;
+            else if( yearAngle <0)
+                yearAngle = yearAngle+360;
+
+            dayAngle += daySpeed;
+            if (dayAngle >360f)
+                dayAngle = dayAngle-360;
+            else if( dayAngle <0)
+                dayAngle = dayAngle+360;
+            System.out.println("yearAngle: " + yearAngle + " dayAngle: " + dayAngle);
     }
+
 }
